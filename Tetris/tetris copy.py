@@ -2,20 +2,20 @@
 # Started 05/04/22
 
 '''
-
-- expamd window
-- better background
-- menu
+- menu (Make Buttons)
 - Sounds
+- High scores
 
 '''
 
 # Importing modules
-from tkinter import Menu
 import pygame as pg
+from pygame import mixer
 import random as r
 import pickle
 pg.init()
+mixer.pre_init(44100, -16, 2, 512)
+mixer.init()
 
 # Building game window (10x20)
 tile_size = 50
@@ -52,7 +52,10 @@ play_img = pg.image.load("./Images/Buttons/play_btn.png").convert()
 background1_img = pg.image.load("./Images/background1.png").convert_alpha()
 background2_img = pg.image.load("./Images/background2.png").convert_alpha()
 
-
+# Load Sounds
+pg.mixer.music.load("./Sounds/backgroundMusic.wav")
+pg.mixer.music.play(-1, 0.0, 5000)
+row_destroy = pg.mixer.Sound("./Sounds/completeRow.wav")
 
 # drawing grid
 def draw_grid():
@@ -416,6 +419,7 @@ class utility:
                     if self.rect.colliderect(tile.rect.x, tile.rect.y, tile_size, tile_size):
                         tile.kill()
                 self.score += 10
+                row_destroy.play()
 
 
 # Creating class instances
