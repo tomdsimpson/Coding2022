@@ -3,7 +3,6 @@
 
 '''
 - menu (Make Buttons)
-- Sounds
 - High scores
 
 '''
@@ -35,7 +34,7 @@ back_pos2 = 1151
 
 
 # Fonts
-score_font = pg.font.SysFont("Bauhaus 93", 40)
+score_font = pg.font.SysFont("Bauhaus 93", 60)
 
 # Window Settings
 screen = pg.display.set_mode((screen_width, screen_height))
@@ -68,6 +67,18 @@ def draw_grid():
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
+
+# Find Min
+def find_min(list):
+    minimum = list[0][1]
+    pos = 0
+    for counter in range(1, len(list)):
+        if list[counter][1] < minimum:
+            minimum = x[1]
+            pos = counter
+    return minimum, pos
+
+
 
 
 
@@ -400,9 +411,36 @@ class utility:
     def __init__(self):
         self.rect = pg.Rect((1, 1), (500, 1))
         self.score = 0
+        self.max_scores = []
+        try:
+            self.scores = open("scores.csv", "r+")
+        except:
+            self.scores = open("scores.csv", "x")
+            self.scores = open("scores.csv", "r+")
 
-    def update(self):
-        draw_text(str(self.score), score_font, (255, 255, 255), tile_size, 15)
+    def show_score(self):
+        draw_text("Score: " + (str(self.score)), score_font, (255, 255, 255), 10, 10)
+    
+    def find_maxScores(self):
+        for counter, line in enumerate(self.scores):
+
+            if counter < 10:
+                self.max_scores.append(line)
+            else:
+                minimum, pos = find_min(self.max_scores)
+                if line[1] > minimum:
+                    self.max_scores[pos] = line
+
+    def display_maxScores(self):
+        counter = 1
+        for x in self.max_scores:
+            x = x.split(",")
+            draw_text((x[0] + " Scored: " + x[1] + " Points! "), score_font, (255, 255, 255), tile_size, counter*tile_size+20)
+            counter += 1
+
+    def add_score(self):
+        name = input("Please input your name.   ")
+        self.scores.write(f"{name},{self.score}")
 
     def check_row(self):
         for row in range(20):
@@ -427,14 +465,13 @@ active_piece = Piece(piece_counter)
 game_engine = utility()
 
 restart_btn = Button(50, 50, restart_img)
-menu_btn = Button(250, 50, menu_img)
+menu_btn = Button(300, 50, menu_img)
 play_btn = Button(100, 500, play_img)
 quit_btn = Button(300, 500, menu_img)
 
 # Game Loop
 run = True
 game_state = "menu"
-
 
 while run:
 
@@ -454,8 +491,6 @@ while run:
 
     #  Updating Game
     if game_state == "playing":
-        
-        game_engine.update()
         
         for x in inactive_pieces:
             x.update()
@@ -481,6 +516,7 @@ while run:
         pg.draw.line(screen, (255, 255, 255), (0, tile_size*3), (screen_width, tile_size*3))
         tile_group.draw(screen)
         game_engine.check_row()
+        game_engine.show_score()
 
 
     if game_state == "finished":
@@ -489,6 +525,7 @@ while run:
         tile_group.draw(screen)
 
         if restart_btn.draw():
+            game_engine.add_score()
             # Add Score Save Later
             game_engine.score = 0
             tile_group.empty()
@@ -496,11 +533,12 @@ while run:
                 del(x)
             inactive_pieces = []
             active_piece = ""
-            piece_counter = 0
+            piece_counter = 0 
             active_piece = Piece(piece_counter)
             game_state = "playing"
 
         if menu_btn.draw():
+            game_engine.add_score()
             # Add Score Save Later
             game_engine.score = 0
             tile_group.empty()
@@ -521,6 +559,9 @@ while run:
         
         if quit_btn.draw():
             run = False
+        
+        game_engine.find_maxScores()
+        game_engine.display_maxScores()
 
     # Exit Functionality
     for event in pg.event.get():
@@ -529,3 +570,5 @@ while run:
  
     # Displaying content
     pg.display.update()
+
+game_engine.scores.close()
