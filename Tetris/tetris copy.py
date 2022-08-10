@@ -8,6 +8,8 @@
 '''
 
 # Importing modules
+from typing import Counter
+from matplotlib.pyplot import title
 import pygame as pg
 from pygame import mixer
 import random as r
@@ -34,7 +36,12 @@ back_pos2 = 1151
 
 
 # Fonts
+title_font = pg.font.SysFont("Bauhaus 93", 80)
 score_font = pg.font.SysFont("Bauhaus 93", 60)
+menu_font = pg.font.SysFont("Bauhaus 93", 40)
+
+# Colors
+white = (255, 255, 255)
 
 # Window Settings
 screen = pg.display.set_mode((screen_width, screen_height))
@@ -53,9 +60,12 @@ background2_img = pg.image.load("./Images/background2.png").convert_alpha()
 
 # Load Sounds
 pg.mixer.music.load("./Sounds/backgroundMusic.wav")
-pg.mixer.music.play(-1, 0.0, 5000)
+#pg.mixer.music.play(-1, 0.0, 5000)
 row_destroy = pg.mixer.Sound("./Sounds/completeRow.wav")
 
+
+
+# --- Functions --- #
 # drawing grid
 def draw_grid():
     for line in range(0, screen_width//tile_size + 1):
@@ -68,20 +78,36 @@ def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
 
-# Find Min
-def find_min(list):
-    minimum = list[0][1]
-    pos = 0
-    for counter in range(1, len(list)):
-        if list[counter][1] < minimum:
-            minimum = x[1]
-            pos = counter
-    return minimum, pos
+# --- Score Screen Functions --- #
+# Find Min 2d array
+def find_min(scores):
+    minimum_score = scores[0][1]
+    minimum_pos = 0
+    for counter, x in enumerate(scores):
+        if x[1] < minimum_score:
+            minimum_score = x[1]
+            minimum_pos = counter
+    return minimum_score, minimum_pos
+
+# Sorting Scores
+def swap(list, pos1, pos2):
+    list[pos1], list[pos2] = list[pos2], list[pos1]
+    return list
+
+def sort_scores(max_scores):
+
+    for x in range(1, len(max_scores)):
+        value = max_scores[x][1]
+        pointer = x-1
+        while pointer >=0 and value > max_scores[pointer][1]:
+            max_scores = swap(max_scores, pointer, pointer +1)
+            pointer -= 1
+    
+    return max_scores
 
 
 
-
-
+# --- Classes --- #
 # Button class
 class Button():
 
@@ -113,6 +139,32 @@ class Button():
 
         return action
 
+# Text Input for scores
+class Input_box():
+
+    def __init__(self, x, y, w, font):
+        super().__init__()
+        self.color = white
+        self.backcolor = None
+        self.pos = (x, y) 
+        self.width = w
+        self.font = font
+        self.active = True
+        self.text = ""
+
+    def update(self, event_list):
+        for event in event_list:
+            if event.type == pg.KEYDOWN and self.active:
+                if event.key == pg.K_RETURN:
+                    self.active = False
+                    game_engine.add_score(self.text)
+                elif event.key == pg.K_BACKSPACE:
+                    self.text = self.text[:-1]
+                else:
+                    if len(self.text) < 17:
+                        self.text += event.unicode
+        draw_text(self.text, self.font, self.color, self.pos[0], self.pos[1])
+
 
 
 # Defining tile class
@@ -131,6 +183,7 @@ class Tile(pg.sprite.Sprite):
         self.id2 = id2
         self.state = "falling"
 
+    # Checking x and diagonal collisions
     def check_collision(self, dx, dy):
 
         x_col = False
@@ -154,8 +207,7 @@ class Tile(pg.sprite.Sprite):
 
         return x_col, diag_col
 
-
-
+    # Checking y collisions
     def check_collision_y(self, dy):
         collision = False
 
@@ -411,36 +463,43 @@ class utility:
     def __init__(self):
         self.rect = pg.Rect((1, 1), (500, 1))
         self.score = 0
-        self.max_scores = []
+        self.max_scores = [["Empty", 0] for x in range(10)]
         try:
-            self.scores = open("scores.csv", "r+")
+            self.scores = open("scores.csv", "r")
         except:
-            self.scores = open("scores.csv", "x")
-            self.scores = open("scores.csv", "r+")
+            self.scores = open("scores.csv", "w")
+            self.scores.close()
+            self.scores = open("scores.csv", "r")
+
+        for counter, line in enumerate(self.scores):
+            line = (line.strip()).split(",")
+            self.max_scores[counter][0] = line[0]
+            self.max_scores[counter][1] = int(line[1])
+
 
     def show_score(self):
-        draw_text("Score: " + (str(self.score)), score_font, (255, 255, 255), 10, 10)
-    
-    def find_maxScores(self):
-        for counter, line in enumerate(self.scores):
-
-            if counter < 10:
-                self.max_scores.append(line)
-            else:
-                minimum, pos = find_min(self.max_scores)
-                if line[1] > minimum:
-                    self.max_scores[pos] = line
+        draw_text("Score: " + (str(self.score)), score_font, white, 10, 10)
 
     def display_maxScores(self):
-        counter = 1
-        for x in self.max_scores:
-            x = x.split(",")
-            draw_text((x[0] + " Scored: " + x[1] + " Points! "), score_font, (255, 255, 255), tile_size, counter*tile_size+20)
-            counter += 1
+        draw_text("Tetris", title_font, white, 25, 100)
+        draw_text("Top Scores", score_font, white, 50, 225)
+        pg.draw.line(screen, white, (15, 160), (485, 160), 2)
+        for counter, x in enumerate(self.max_scores):
+            draw_text((f"{x[0]}   -------   {x[1]}"), menu_font, (255, 0, 50), 100, 80*counter+325)
 
-    def add_score(self):
-        name = input("Please input your name.   ")
-        self.scores.write(f"{name},{self.score}")
+    def add_score(self, name):
+        # Checking if top 10 and replacing lowest score
+        min_score, min_pos = find_min(self.max_scores)
+        if self.score > min_score:
+            self.max_scores[min_pos][0] = name
+            self.max_scores[min_pos][1] = self.score
+        self.max_scores = sort_scores(self.max_scores)
+
+    def update_file(self):
+        self.scores = open("scores.csv", "w")
+        for x in range(10):
+            self.scores.write(self.max_scores[x][0] + "," + str(self.max_scores[x][1]) + "\n")
+        self.scores.close()
 
     def check_row(self):
         for row in range(20):
@@ -466,8 +525,11 @@ game_engine = utility()
 
 restart_btn = Button(50, 50, restart_img)
 menu_btn = Button(300, 50, menu_img)
-play_btn = Button(100, 500, play_img)
-quit_btn = Button(300, 500, menu_img)
+play_btn = Button(225, 100, play_img)
+quit_btn = Button(350, 100, menu_img)
+
+score_box = Input_box(50, 200, 400, score_font)
+
 
 # Game Loop
 run = True
@@ -482,6 +544,8 @@ while run:
     #draw_grid()
     back_pos1 += 2
     back_pos2 += 2
+
+    event_list = pg.event.get()
 
     # Checking if on screen
     if back_pos1 >= 1151:
@@ -513,7 +577,7 @@ while run:
                 active_piece = Piece(piece_counter)
 
         # Checking for complete rows and drawing
-        pg.draw.line(screen, (255, 255, 255), (0, tile_size*3), (screen_width, tile_size*3))
+        pg.draw.line(screen, white, (0, tile_size*3), (screen_width, tile_size*3))
         tile_group.draw(screen)
         game_engine.check_row()
         game_engine.show_score()
@@ -521,12 +585,12 @@ while run:
 
     if game_state == "finished":
 
-        pg.draw.line(screen, (255, 255, 255), (0, tile_size*3), (screen_width, tile_size*3))
+        pg.draw.line(screen, white, (0, tile_size*3), (screen_width, tile_size*3))
         tile_group.draw(screen)
 
+        score_box.update(event_list)
+
         if restart_btn.draw():
-            game_engine.add_score()
-            # Add Score Save Later
             game_engine.score = 0
             tile_group.empty()
             for x in inactive_pieces:
@@ -538,8 +602,6 @@ while run:
             game_state = "playing"
 
         if menu_btn.draw():
-            game_engine.add_score()
-            # Add Score Save Later
             game_engine.score = 0
             tile_group.empty()
             for x in inactive_pieces:
@@ -560,15 +622,16 @@ while run:
         if quit_btn.draw():
             run = False
         
-        game_engine.find_maxScores()
         game_engine.display_maxScores()
 
     # Exit Functionality
-    for event in pg.event.get():
+    for event in event_list:
         if event.type == pg.QUIT:
             run = False
  
     # Displaying content
     pg.display.update()
 
+# Updating File
 game_engine.scores.close()
+game_engine.update_file()
