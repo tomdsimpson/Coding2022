@@ -1,11 +1,7 @@
 # Tetris Game
 # Started 05/04/22
 
-'''
-- menu (Make Buttons)
-- High scores
 
-'''
 
 # Importing modules
 from typing import Counter
@@ -18,7 +14,7 @@ pg.init()
 mixer.pre_init(44100, -16, 2, 512)
 mixer.init()
 
-# Building game window (10x20)
+# Building game window (10x(20+3))
 tile_size = 50
 screen_width = tile_size * 10
 screen_height = tile_size * 23
@@ -34,11 +30,10 @@ piece_counter = 0
 back_pos1 = 0
 back_pos2 = 1151
 
-
 # Fonts
-title_font = pg.font.SysFont("Bauhaus 93", 80)
-score_font = pg.font.SysFont("Bauhaus 93", 60)
-menu_font = pg.font.SysFont("Bauhaus 93", 40)
+title_font = pg.font.SysFont("Ubuntu", 60)
+score_font = pg.font.SysFont("Ubuntu", 45)
+menu_font = pg.font.SysFont("Ubuntu", 30)
 
 # Colors
 white = (255, 255, 255)
@@ -133,8 +128,6 @@ class Button():
         if pg.mouse.get_pressed()[0] == 0:
             self.clicked = False
 
-
-
         screen.blit(self.image, self.rect)
 
         return action
@@ -153,19 +146,20 @@ class Input_box():
         self.text = ""
 
     def update(self, event_list):
+
+        # Functionality
         for event in event_list:
             if event.type == pg.KEYDOWN and self.active:
                 if event.key == pg.K_RETURN:
                     self.active = False
                     game_engine.add_score(self.text)
+                    self.text = ""
                 elif event.key == pg.K_BACKSPACE:
                     self.text = self.text[:-1]
                 else:
                     if len(self.text) < 17:
                         self.text += event.unicode
         draw_text(self.text, self.font, self.color, self.pos[0], self.pos[1])
-
-
 
 # Defining tile class
 class Tile(pg.sprite.Sprite):
@@ -232,8 +226,6 @@ class Tile(pg.sprite.Sprite):
         self.rect.y = pos[1] + (pattern[1]*tile_size)
         self.rect.x = pos[0] + (pattern[0]*tile_size)
 
-
-
 # Defining Full piece class
 class Piece():
 
@@ -288,7 +280,6 @@ class Piece():
         if key[pg.K_DOWN]:
             dy = 25
 
-
         # Tile Rotaion
         if key[pg.K_SPACE] and self.cooldown2 <= 0:
             self.orient_pointer += 1
@@ -330,7 +321,6 @@ class Piece():
 
             for tile in self.tiles:
                 tile.update(self.pattern[self.orient_pointer % len(self.pattern)][tile.id2], self.root_pos)
-
 
         # Checking collsion
         x_col = False
@@ -449,6 +439,8 @@ class inactive_piece():
         
         if dy > 0:
             self.state = "falling"
+        elif dy < 0:
+            print("What The")
         else:
             self.state = "stationary"
         
@@ -475,6 +467,8 @@ class utility:
             line = (line.strip()).split(",")
             self.max_scores[counter][0] = line[0]
             self.max_scores[counter][1] = int(line[1])
+        
+        self.max_scores = sort_scores(self.max_scores)
 
 
     def show_score(self):
@@ -485,7 +479,7 @@ class utility:
         draw_text("Top Scores", score_font, white, 50, 225)
         pg.draw.line(screen, white, (15, 160), (485, 160), 2)
         for counter, x in enumerate(self.max_scores):
-            draw_text((f"{x[0]}   -------   {x[1]}"), menu_font, (255, 0, 50), 100, 80*counter+325)
+            draw_text((f"{x[0]}   -------   {x[1]}"), menu_font, (255, 0, 50), 75, 80*counter+325)
 
     def add_score(self, name):
         # Checking if top 10 and replacing lowest score
@@ -528,7 +522,7 @@ menu_btn = Button(300, 50, menu_img)
 play_btn = Button(225, 100, play_img)
 quit_btn = Button(350, 100, menu_img)
 
-score_box = Input_box(50, 200, 400, score_font)
+score_box = Input_box(50, 450, 400, score_font)
 
 
 # Game Loop
@@ -585,10 +579,15 @@ while run:
 
     if game_state == "finished":
 
-        pg.draw.line(screen, white, (0, tile_size*3), (screen_width, tile_size*3))
-        tile_group.draw(screen)
+        #pg.draw.line(screen, white, (0, tile_size*3), (screen_width, tile_size*3))
+        #tile_group.draw(screen)
 
         score_box.update(event_list)
+        draw_text(f"You scored {game_engine.score} points!", score_font, white, 50, 200)
+        pg.draw.line(screen, white, (0, 440), (500, 440))
+        pg.draw.line(screen, white, (0, 510), (500, 510))
+        draw_text("Enter Your Name:", menu_font, white, 50, 390)
+
 
         if restart_btn.draw():
             game_engine.score = 0
@@ -600,6 +599,7 @@ while run:
             piece_counter = 0 
             active_piece = Piece(piece_counter)
             game_state = "playing"
+            score_box.active = True
 
         if menu_btn.draw():
             game_engine.score = 0
@@ -611,6 +611,7 @@ while run:
             piece_counter = 0
             active_piece = Piece(piece_counter)
             game_state = "menu"
+            score_box.active = True
 
 
 
