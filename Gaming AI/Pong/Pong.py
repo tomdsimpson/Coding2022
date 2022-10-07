@@ -62,7 +62,7 @@ class Ball:
         self.rect = pg.Rect(0, 0, 25, 25)
         self.rect.x = x
         self.rect.y = y
-        self.direction = r.randint(263, 363) / 100
+        self.direction = r.randint(-50, 50) / 100
         self.speed = 10
     
     def update(self, paddle):
@@ -71,27 +71,30 @@ class Ball:
         dx = self.speed * math.cos(self.direction)
         dy = self.speed * math.sin(self.direction) * -1
 
-        # Checking for collision!!
-        if self.rect.bottom + dy > WIN_HEIGHT:
-            self.direction = 2*math.pi-self.direction
-            idy = dy
-            dy = WIN_HEIGHT - self.rect.bottom
-            dx = dx*(dy/idy)
+        # Checking for collision
 
-        elif self.rect.top + dy < 0:
+        # Bottom of screen
+        if self.rect.bottom + dy >= WIN_HEIGHT:
             self.direction = 2*math.pi-self.direction
-            idy = dy
+            #idy = dy
+            dy = WIN_HEIGHT - self.rect.bottom
+            dx = dy*math.tan(self.direction)#dx*(dy/idy)
+
+        # Top of screen
+        if self.rect.top + dy <= 0:
+            self.direction = 2*math.pi-self.direction
+            #idy = dy
             dy = self.rect.top
-            dx = dx*(dy/idy)
+            dx = dy*math.tan(self.direction) #dx*(dy/idy)
             troubleshoot[0] = True
 
-        elif self.rect.right + dx > WIN_WIDTH:
-            # Pretend Player
+        # Bouncing on left (fake player for training)
+        if self.rect.left + dx <= 0:
             rand_angle = r.randint(0,56)/100
-            self.direction = r.choice([math.pi + rand_angle, math.pi - rand_angle])
-            idx = dx
-            dx = WIN_WIDTH - self.rect.right
-            dy = dy*(dx/idx)
+            self.direction = r.choice([rand_angle, 2*math.pi - rand_angle])
+            #idx = dx
+            dx = self.rect.left
+            dy = dy*math.tan(self.direction)
 
         # Paddle Collision
         collide = False
@@ -99,15 +102,14 @@ class Ball:
             
             troubleshoot[1] = True
             # Predictive section
-            idx = dx
-            dx = self.rect.left - paddle.rect.right
-            dy = dy*(dx/idx)
+            dx = self.rect.right - paddle.rect.left
+            dy = dx*math.tan(self.direction)
             scale_factor = abs((paddle.rect.centery - self.rect.centery) / 110)
             
             if self.rect.centery > paddle.rect.centery:
-                self.direction = 2*math.pi - scale_factor
+                self.direction = math.pi - scale_factor
             else:
-                self.direction = scale_factor
+                self.direction = math.pi + scale_factor
 
             collide = True
 
@@ -117,7 +119,7 @@ class Ball:
         if troubleshoot[0] and troubleshoot[1]:
             print("YUUUUUUUUUP")
 
-        if self.rect.left + dx < 0:
+        if self.rect.right + dx >= 1500:
             return [True, collide]
         else:
             return [False, collide]
@@ -128,14 +130,10 @@ class Ball:
 
 
 # --- Game Loop --- #
-
-players = [Paddle(50, 150*(x+1)) for x in range(5)]
-balls = [Ball(737.5, 150*(x+1)) for x in range(5)]
-
 def main(genomes, config):
     
     screen = pg.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-    colours = [(5*x, 5*x, 5*x) for x in range(50)]
+    colours = [(25*x, 25*x, 25*x) for x in range(10)]
     
     nets = []
     ge = []
@@ -145,8 +143,8 @@ def main(genomes, config):
     for _, g in genomes:
         net = neat.nn.FeedForwardNetwork.create(g,config)
         nets.append(net)
-        players.append(Paddle(40, 375))
-        balls.append(Ball(1200, 487.5))
+        players.append(Paddle(1435, 375))
+        balls.append(Ball(300, 487.5))
         g.fitness = 0
         ge.append(g)
     
@@ -161,6 +159,8 @@ def main(genomes, config):
         for event in events:
             if event.type == pg.QUIT:
                 running = False
+                pg.quit()
+                quit()
 
         length = len(players)
         counter = 0
