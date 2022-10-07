@@ -16,7 +16,7 @@ WIN_HEIGHT = 1000
 
 fps = 60
 clock = pg.time.Clock()
-white = (255, 255, 255)
+
 
 
 
@@ -71,10 +71,9 @@ class Ball:
         self.rect.y = y
         self.direction = r.randint(-50, 50) / 100
         self.speed = 10
-        self.score_a = 0
-        self.score_b = 0
+        self.score = 0
     
-    def update(self, paddle1, paddle2): 
+    def update(self, paddle): 
 
         troubleshoot = [False, False]
         dx = self.speed * math.cos(self.direction)
@@ -107,43 +106,33 @@ class Ball:
 
         # Paddle Collision
         collide = False
-        if paddle2.rect.colliderect(self.rect.x + dx, self.rect.y + dy, self.rect.width, self.rect.height):
+        if paddle.rect.colliderect(self.rect.x + dx, self.rect.y + dy, self.rect.width, self.rect.height):
             
+            troubleshoot[1] = True
             # Predictive section
-            dx = self.rect.right - paddle2.rect.left
+            dx = self.rect.right - paddle.rect.left
             dy = dx*math.tan(self.direction)
-            scale_factor = abs((paddle2.rect.centery - self.rect.centery) / 110)
+            scale_factor = abs((paddle.rect.centery - self.rect.centery) / 110)
             
-            if self.rect.centery < paddle2.rect.centery:
+            if self.rect.centery < paddle.rect.centery:
                 self.direction = math.pi - scale_factor
             else:
                 self.direction = math.pi + scale_factor
 
-        elif paddle1.rect.colliderect(self.rect.x + dx, self.rect.y + dy, self.rect.width, self.rect.height):
-            
-            # Predictive section
-            dx = self.rect.left - paddle1.rect.right
-            dy = dx*math.tan(self.direction)
-            scale_factor = abs((paddle1.rect.centery - self.rect.centery) / 110)
-            
-            if self.rect.centery < paddle1.rect.centery:
-                self.direction = scale_factor
-            else:
-                self.direction = 2*math.pi - scale_factor
+            collide = True
+            self.score += 1
+
 
         self.rect.x += dx
         self.rect.y += dy
         
+        if troubleshoot[0] and troubleshoot[1]:
+            print("YUUUUUUUUUP")
+
         if self.rect.right + dx >= 1500:
-            self.score_a += 1
-            self.rect.x = 750
-            self.rect.y = 487.5
-            self.direction = 0
-        elif self.rect.left + dx <= 0:
-            self.rect.right += 1
-            self.rect.x = 750
-            self.rect.y = 487.5
-            self.direction = math.pi
+            return [True, collide]
+        else:
+            return [False, collide]
 
     def draw(self, screen, colour):
         pg.draw.rect(screen, colour, self.rect)
@@ -151,22 +140,30 @@ class Ball:
 
 
 # --- Game Loop --- #
-def main(config):
+def main(genomes, config):
     
     screen = pg.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-    ai_player = Paddle(1435, 375)
-    player = Paddle(50, 375)
-    ball = Ball(300, 487.5)
-    pickle_in = open("pongAI", "rb")
-    g = pickle.load(pickle_in)
-    net = neat.nn.FeedForwardNetwork.create(g,config)
+    colours = [(10*x, 10*x, 10*x) for x in range(25)]
+    
+    nets = []
+    ge = []
+    players = []
+    balls = []
+
+    for _, g in genomes:
+        net = neat.nn.FeedForwardNetwork.create(g,config)
+        nets.append(net)
+        players.append(Paddle(1435, 375))
+        balls.append(Ball(300, 487.5))
+        g.fitness = 0
+        ge.append(g)
+    
     
     running = True
     while running:
 
         clock.tick(fps)
         screen.fill((0, 0, 0))
-        key = pg.key.get_pressed()
 
         events = pg.event.get()
         for event in events:
@@ -175,33 +172,67 @@ def main(config):
                 pg.quit()
                 quit()
 
-        # Paddle Movement
-        output = net.activate((ball.rect.centery - ai_player.rect.centery, find_dist(ai_player, ball)))
-        if output[0] > 0.5:
-            pass
-        else:
-            if output[1] > 0.5:
-                ai_player.move_up()
-            if output[2] > 0.5:
-                ai_player.move_down()
+        length = len(players)
+        counter = 0
 
-        if key[pg.K_UP]:
-            player.move_up()
-        if key[pg.K_DOWN]:
-            player.move_down()
+        while counter < length:
 
-        ball.update(player, ai_player)
+            ge[counter].fitness += 0.05
+            output = nets[counter].activate((balls[counter].rect.centery - players[counter].rect.centery, find_dist(players[counter], balls[counter])))
+            if output[0] > 0.5:
+                pass
+            else:
+                if output[1] > 0.5:
+                    players[counter].move_up()
+                if output[2] > 0.5:
+                    players[counter].move_down()
 
-        player.draw(screen, white)
-        ai_player.draw(screen, white)
-        ball.draw(screen, white)
+            feedback = balls[counter].update(players[counter])            
+            if balls[counter].score > 14:
+                running = False
+            if feedback[1]:
+                ge[counter].fitness += 1
+            if feedback[0]:
+                ge[counter].fitness -= 1
+                del(balls[counter])
+                del(players[counter])
+                del(colours[counter])
+                del(nets[counter])
+                del(ge[counter])
+                length -= 1
+            else:
+                players[counter].draw(screen, colours[counter])
+                balls[counter].draw(screen, colours[counter])
+            
+
+            counter += 1
+        
+        if len(players) == 0:
+            running = False
+
         draw_midline(screen)
         pg.display.update()
 
 
 
+def run(config_path):
+    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, 
+    neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
+
+    p = neat.Population(config)
+    p.add_reporter(neat.StdOutReporter(True))
+    stats = neat.StatisticsReporter()
+    p.add_reporter(stats)
+
+    winner = p.run(main, 50)
+
+    return winner
+
+
 if __name__ == "__main__":
     local_dir = os.path.dirname(__file__)
     config_path = os.path.join(local_dir, "NEAT_CONFIG.txt")
-    config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet, neat.DefaultStagnation, config_path)
-    main(config)
+    winner = run(config_path)
+
+pickle_out = open("pongAI", "wb")
+pickle.dump(winner, pickle_out)
