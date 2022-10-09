@@ -1,11 +1,7 @@
 # Tetris Game
 # Started 05/04/22
 
-
-
 # Importing modules
-from typing import Counter
-from matplotlib.pyplot import title
 import pygame as pg
 from pygame import mixer
 import random as r

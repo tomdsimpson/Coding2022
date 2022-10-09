@@ -7,6 +7,7 @@ import math
 import random as r
 import neat
 import os
+pg.init()
 
 # --- Defing Variables --- #
 
@@ -17,7 +18,7 @@ WIN_HEIGHT = 1000
 fps = 60
 clock = pg.time.Clock()
 white = (255, 255, 255)
-
+score_font = pg.font.SysFont("Ubuntu", 40)
 
 
 # --- Defining Function ---#
@@ -35,6 +36,11 @@ def find_dist(a, b):
      y = a.rect.y - b.rect.y
      distance = math.sqrt(x**2 + y**2)
      return distance
+
+def draw_text(screen, text, colour, x, y, font):
+    img = font.render(text, True, colour)
+    screen.blit(img, (x, y))   
+
 
 
 # --- Defining Classes --- #
@@ -97,14 +103,6 @@ class Ball:
             dx = dy*math.tan(self.direction) #dx*(dy/idy)
             troubleshoot[0] = True
 
-        # Bouncing on left (fake player for training)
-        if self.rect.left + dx <= 0:
-            rand_angle = r.randint(0,56)/100
-            self.direction = r.choice([rand_angle, 2*math.pi - rand_angle])
-            #idx = dx
-            dx = self.rect.left
-            dy = dy*math.tan(self.direction)
-
         # Paddle Collision
         collide = False
         if paddle2.rect.colliderect(self.rect.x + dx, self.rect.y + dy, self.rect.width, self.rect.height):
@@ -134,13 +132,13 @@ class Ball:
         self.rect.x += dx
         self.rect.y += dy
         
-        if self.rect.right + dx >= 1500:
+        if self.rect.right >= 1500:
             self.score_a += 1
             self.rect.x = 750
             self.rect.y = 487.5
             self.direction = 0
-        elif self.rect.left + dx <= 0:
-            self.rect.right += 1
+        elif self.rect.left <= 0:
+            self.score_b += 1
             self.rect.x = 750
             self.rect.y = 487.5
             self.direction = math.pi
@@ -192,10 +190,14 @@ def main(config):
 
         ball.update(player, ai_player)
 
+        # Drawing Objects
         player.draw(screen, white)
         ai_player.draw(screen, white)
         ball.draw(screen, white)
         draw_midline(screen)
+        draw_text(screen, str(ball.score_a), white, 150, 50, score_font)
+        draw_text(screen, str(ball.score_b), white, 1300, 50, score_font)
+        
         pg.display.update()
 
 
