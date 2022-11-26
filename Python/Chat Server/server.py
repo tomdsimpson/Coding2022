@@ -33,12 +33,13 @@ def handle_client(conn, addr):
 
             if msg == DISCONNECT_MESSAGE:
                 connected = False
+                print(f"[Disconected] [{addr}]")
                 break
 
             print(f"[{addr}] {msg}")
             with clients_lock:
                 for c in clients:
-                    c.sendall(f"[{addr}] {msg}".encode(FORMAT))
+                    c.sendall(f"{msg}".encode(FORMAT))
     
     finally:
         with clients_lock:
