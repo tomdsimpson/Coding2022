@@ -14,9 +14,11 @@ screen = pg.display.set_mode((WIDTH, HEIGHT))
 pg.display.set_caption("Dungeon Battle")
 fps = 60
 clock = pg.time.Clock()
+game_state = "menu"
 
 TERRAIN_DICT = {"1":"../IMG/TERRAIN/square_room.png", "2":"../IMG/TERRAIN/corridor_horizontal.png", "3":"../IMG/TERRAIN/corridor_vertical.png"}
 
+play_img = pg.image.load("../IMG/play_btn.png").convert()
 icon_img = pg.transform.scale(pg.image.load("../IMG/icon.png"), (60, 60))
 score_font = pg.font.SysFont("Ubuntu", 45)
 
@@ -49,6 +51,35 @@ def find_nonzero_min(array):
 def draw_text(text, font, text_col, x, y):
     img = font.render(text, True, text_col)
     screen.blit(img, (x, y))
+
+
+class Button():
+
+    def __init__(self, x, y, image):
+
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.clicked = False
+
+    def draw(self):
+        action = False
+
+        # Getting mouse position
+        pos = pg.mouse.get_pos()
+
+        # Checking mouseover and click conditions
+        if self.rect.collidepoint(pos) and pg.mouse.get_pressed()[0] == 1 and not self.clicked:
+            action = True
+            self.clicked = True
+
+        if pg.mouse.get_pressed()[0] == 0:
+            self.clicked = False
+
+        screen.blit(self.image, self.rect)
+
+        return action
 
 
 
@@ -222,7 +253,7 @@ class Player:
         self.speed = 0.1
 
         # User input gathering
-        if self.state != "dead":
+        if self.state != "dying":
             if self.state != "attack":
                 self.state = "idle"    
 
@@ -255,11 +286,13 @@ class Player:
     def update(self, screen, screen_pos, score):
 
         # Death control
-        if self.life < 1:
+        if self.life == 0 and self.state != "dying":
+            self.animation_tick = 0
             self.state = "dying"
-            if self.animation_tick >= 7:
-                print("Dead")
-                self.state = "dead"
+
+        if self.animation_tick >= 7 and self.state == "dying":
+            print("Dead")
+            self.state = "dead"
 
         if self.state == "attack":
             if self.direction == "R":
@@ -383,7 +416,7 @@ class Goblin(pg.sprite.Sprite):
         y_diff = (player.y + 0.5*player.height) - (self.rect.y + 0.5*self.rect.height)
         distance = math.sqrt(x_diff**2 + y_diff**2)
 
-        if distance < 500:
+        if distance < 750:
             self.state = "moving"
             if distance < 50:
                 self.state = "attack"
@@ -442,7 +475,7 @@ class Goblin(pg.sprite.Sprite):
                 self.state = "moving"
                 self.animation_tick = 0
 
-                if self.player_hit:
+                if self.player_hit and world.player.life != 0:
                     world.player.life -= 1
                     self.player_hit = False
 
@@ -520,19 +553,9 @@ class Portal(pg.sprite.Sprite):
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-world = World()
 run = True
+
+play_btn = Button(450, 300, play_img)
 
 while run:
     
@@ -547,26 +570,35 @@ while run:
         if event.type == pg.QUIT:
             run = False
     
-    # Get movement
-    if world.player.state == "dead":
-        run = False
+    if game_state == "playing":
+        # Get movement
+        dx, dy = world.player.gain_input(key)
+        if world.player.state == "active":
+            dx, dy = world.check_col(world.player.rect, dx, dy)
+        world.screen_pos[0] += dx
+        world.screen_pos[1] += dy
+        world.player.rect.x += dx
+        world.player.rect.y += dy   
+        
+        world.terrainGroup.update(screen, world.screen_pos)
+        world.portalGroup.update(screen, world.screen_pos, world.enemyGroup)
+        world.score = world.player.update(screen, world.screen_pos, world.score)     
+        world.enemyGroup.update(screen, world.screen_pos, world.player.rect)
 
-    dx, dy = world.player.gain_input(key)
-    if world.player.state == "active":
-        dx, dy = world.check_col(world.player.rect, dx, dy)
-    world.screen_pos[0] += dx
-    world.screen_pos[1] += dy
-    world.player.rect.x += dx
-    world.player.rect.y += dy   
+        draw_text(f"Score:  {world.score}", score_font, (255,255,255), 10, 70)
+        draw_text(f"Lives:     x{world.player.life}", score_font, (255,255,255), 10, 10)
+        screen.blit(icon_img, (120, 10))
+        
+        if world.player.state == "dead":
+            game_state = "menu"
+            del(world)
     
-    world.terrainGroup.update(screen, world.screen_pos)
-    world.portalGroup.update(screen, world.screen_pos, world.enemyGroup)
-    world.score = world.player.update(screen, world.screen_pos, world.score)     
-    world.enemyGroup.update(screen, world.screen_pos, world.player.rect)
+    else:
 
-    draw_text(f"Score:  {world.score}", score_font, (255,255,255), 10, 70)
-    draw_text(f"Lives:     x{world.player.life}", score_font, (255,255,255), 10, 10)
-    screen.blit(icon_img, (120, 10))
+        if play_btn.draw():
+            world = World()
+            game_state = "playing"
+
 
     # Displaying content
     pg.display.update()
