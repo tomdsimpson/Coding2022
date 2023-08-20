@@ -10,21 +10,80 @@ screen = pg.display.set_mode((WIDTH, HEIGHT))
 fps = 60
 clock = pg.time.Clock()
 
-def clip(surface, x, y, x_size, y_size): #Get a part of the image
-    handle_surface = surface.copy() #Sprite that will get process later
-    clipRect = pg.Rect(x,y,x_size,y_size) #Part of the image
-    handle_surface.set_clip(clipRect) #Clip or you can call cropped
-    image = surface.subsurface(handle_surface.get_clip()) #Get subsurface
-    return image.copy() #Return
 
-
-
-
+def ColorMask(image, mask_color):
+    mask_image = image.convert()
+    mask_image.set_colorkey(mask_color)
+    mask = pg.mask.from_surface(mask_image)
+    mask.invert()
+    return mask
 
 class World:
 
-    def __init__(self):
-        pass
+    def __init__(self, terrain):
+        
+        # Load Assets - read in level ...
+        self.terrain = []
+        for x in terrain:
+            terrain_img = pg.image.load(f"../IMG/TERRAIN/{x[0]}.png").convert_alpha()
+            terrain_pos = x[1]
+            self.terrain.append(Terrain(terrain_img, terrain_pos))
+
+    def update(self, offset_x, offset_y):
+        
+        overlap_x, overlap_y = 0, 0
+        for x in self.terrain:
+
+            a, b = x.check_col(offset_x, offset_y)
+            overlap_x += a
+            overlap_y += b
+
+        if overlap_x > 50: overlap_x = 50
+        if overlap_y > 60: overlap_y = 60
+
+        offset_x = offset_x+(overlap_x-50)
+        offset_y = offset_y+(overlap_y-60)
+
+        for x in self.terrain:
+            x.position[0] += (offset_x)
+            x.position[1] += (offset_y)
+
+        return offset_x, offset_y
+
+    def draw(self, screen):
+        for x in self.terrain:
+            x.draw(screen)
+
+class Terrain():
+
+    def __init__(self, image, position):
+
+        self.image = image
+        self.position = position
+        self.rect = self.image.get_rect()
+
+    def check_col(self, offset_x, offset_y):
+
+        #X Plane
+        x_overlap = min([525 - (self.position[0]+offset_x), (self.position[0]+self.rect.width + offset_x) - 475])
+        y_overlap = min([530 - (self.position[1]+offset_y), (self.position[1]+self.rect.height + offset_y) - 470])
+        
+        if x_overlap < 0:
+            x_overlap = 0
+        if y_overlap < 0:
+            y_overlap = 0
+        
+        return x_overlap, y_overlap
+        
+
+    def update(self, offset_x, offset_y):
+        
+        self.position[0] += offset_x
+        self.position[1] += offset_y
+
+    def draw(self, screen):
+        
+        screen.blit(self.image, self.position)
 
 
 
@@ -58,12 +117,16 @@ class Player:
         for x in range (8):
             self.walkD_images.append(pg.transform.scale(pg.image.load(f"../IMG/Player/WalkD/walk{x+1}.png").convert_alpha(), (60, 60)))
 
-        self.direction = False
+        self.direction = "D"
         self.moving = False
         self.animation_tick = 0
         self.speed = 0.1
+        self.rect = pg.Rect((475, 470), (50, 60))
 
-    def movement(self, offset_x, offset_y):
+    def update(self, offset_x, offset_y):
+
+        # Movement
+        offset_x, offset_y = 0, 0
 
         self.moving = False
         self.speed = 0.1
@@ -88,13 +151,6 @@ class Player:
             self.moving = True
             self.direction = "R"
         
-
-        
-        if abs(offset_x) > 50:
-            offset_x = 0
-        if abs(offset_y) > 50:
-            offset_y = 0
-
         return offset_x, offset_y
 
     def draw(self):
@@ -105,24 +161,30 @@ class Player:
 
         if self.moving:
             if self.direction == "R":
-                screen.blit(self.walkR_images[int((self.animation_tick*1.5) % 8)], (475, 525))
+                self.current_image = self.walkR_images[int((self.animation_tick*1.5) % 8)]
             elif self.direction == "U":
-                screen.blit(self.walkU_images[int((self.animation_tick*1.5) % 8)], (475, 525))
+                self.current_image = self.walkU_images[int((self.animation_tick*1.5) % 8)]
             elif self.direction == "L":
-                screen.blit(self.walkL_images[int((self.animation_tick*1.5) % 8)], (455, 525))
+                self.current_image = self.walkL_images[int((self.animation_tick*1.5) % 8)]
             elif self.direction == "D":
-                screen.blit(self.walkD_images[int((self.animation_tick*1.5) % 8)], (475, 525))
+                self.current_image = self.walkD_images[int((self.animation_tick*1.5) % 8)]
         else:
             if self.direction == "R" or self.direction == "U":
-                screen.blit(self.idle_imagesR[int(self.animation_tick % 4)], (475, 525))
+                self.current_image = self.idle_imagesR[int(self.animation_tick % 4)]
             else:
-                screen.blit(self.idle_imagesL[int(self.animation_tick % 4)], (475, 525))
-
-
-
-
-
+                self.current_image = self.idle_imagesL[int(self.animation_tick % 4)]
         
+        pos = [self.rect.left, self.rect.top]
+        if self.direction == "L":               # NOT GOOD
+            pos[0] -= 15                        
+            if self.moving: pos[0] -= 7
+        if self.direction == "D":
+            pos[0] -= 5
+            if not self.moving: pos[0] -= 5
+
+        screen.blit(self.current_image, pos)
+        pg.draw.rect(screen, (255, 255, 255), self.rect, 5)
+
 
 
 
@@ -130,7 +192,7 @@ class Player:
 
 
 # Initialising classes
-game_world = World()
+game_world = World([("square_room", [250, 0]), ("square_room", [250, 500])])
 player = Player()
 offset_x = 0
 offset_y = 0
@@ -144,13 +206,24 @@ while run:
     key = pg.key.get_pressed()
     screen.fill((0, 0, 0))
 
-    offset_x, offset_y = player.movement(offset_x, offset_y)
-    player.draw()
+
 
     # Exit Functionality
     for event in event_list:
         if event.type == pg.QUIT:
             run = False
- 
+    
+    # Set world movement
+    offset_x, offset_y = player.update(offset_x, offset_y)
+    
+    # Check collisons
+    offset_x, offset_y = game_world.update(offset_x, offset_y)
+    
+    # Draw entities
+    game_world.draw(screen)
+    player.draw()
+    
+    print(offset_x)
+
     # Displaying content
     pg.display.update()
