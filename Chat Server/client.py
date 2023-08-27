@@ -76,6 +76,7 @@ class App:
         self.root = tk.Tk()
         self.root.geometry("800x1000+500+500")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
+        self.root.title("Chat Window")
         self.state = False
         self.inputText = tk.StringVar()
         self.username = username
