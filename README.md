@@ -24,4 +24,13 @@ A very common part of games is scrolling, when the character appears stationary 
 
 ## Emails
 
+I have previously looked at pulling information from websites and APIs, it seemed like a natural progression to send this data somewhere I could access it. This program is a basic case of automating an email using my email adress, which could be combined with other programs to send automated updates about a topic.
+
+
+
+## Games and Neural Networks
+
+### Flappy Bird
+
+Flappy bird is another instance of a scrolling game with a simpler
 
