@@ -37,7 +37,7 @@ class wordleUI:
         self.labelFont = ('Helvetica bold',20)
         self.displayFont = ('Helvetica bold',35)
 
-        master.geometry("540x650+1200+200")
+        master.geometry("600x800+1200+200")
         master.config(background="#eeeeee")
         master.title("Wordle")
         master.iconphoto(False, tk.PhotoImage(file='./icon.png'))
