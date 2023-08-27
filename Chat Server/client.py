@@ -28,7 +28,7 @@ class Login():
 
         # Making Login window
         self.root = tk.Tk()
-        self.root.geometry("400x250+500+500")
+        self.root.geometry("500x250+500+500")
         self.root.protocol("WM_DELETE_WINDOW", self.quit)
         self.root.title("Login")
         self.username = tk.StringVar()
