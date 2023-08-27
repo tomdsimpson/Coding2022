@@ -15,3 +15,13 @@ First you run the server program, then run the client inputting a username and t
 
 
 ## Dungeon Scroller
+
+A very common part of games is scrolling, when the character appears stationary realtive to the screen and the world moves around them. I wanted to make a basic game to try this style. My approach was to code the game with reference to the world coordinates and convert them when drawing the images on screen using the screen position in the world. It helped me think of the screen as a window looking into the world.
+
+<img src="Dungeon_Scroller/.png" alt="Login Window" width="400px">
+
+
+
+## Emails
+
+
