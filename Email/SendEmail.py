@@ -16,7 +16,7 @@ with open("/home/tom/Desktop/email.txt") as file:
 message = f"""\
 Subject: Python
 
-Hello World!
+This email was sent by python!
 
 """
 
