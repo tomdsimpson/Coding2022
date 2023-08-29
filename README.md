@@ -72,3 +72,11 @@ Another random program, it makes use of wikepedia random articles and attempts t
 For my final program I wanted to make a wordle solver that could fairly reliably beat the wordle puzzle, I also ended up making a wordle game so that I could test its effectivness more easily! The solver outputs it's recommended guess, then asks for your guess and a code for the result. g-Green y-Yellow w-Grey
 
 <img src="Wordle/wordle.png" alt="Tetris Menu" width="400px">
+
+
+
+# Conclusion
+
+Since finishing this I have continued to program and tweak. It has been great to build on my game development skills and test out a few different modules that I'm definately going to work with again!
+
+All of the program files can be found here!
