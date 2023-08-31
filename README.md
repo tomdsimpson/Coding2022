@@ -77,6 +77,6 @@ For my final program I wanted to make a wordle solver that could fairly reliably
 
 # Conclusion
 
-Since finishing this I have continued to program and tweak. It has been great to build on my game development skills and test out a few different modules that I'm definately going to work with again!
+It has been great to build on my game development skills and test out a few different modules. I'm looking forward to building on this in the future and hopefuly make some fun projects and useful tools.
 
 All of the program files can be found here!
