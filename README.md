@@ -1,6 +1,6 @@
 # Gold DofE Skills Section 
 
-For my Gold section I wanted to build of the game development I started looking at towards the end of silver and try a few things that caught my interest. This included: Tetris, Wordle and solver, neural networks and a simple scrolling game.
+For my Gold section I wanted to build of the game development I started looking at towards the end of silver and try a few things that caught my interest. This included: Tetris, Wordle and solver, neural networks and a simple scrolling game. I spent a few hours each week working on these projects for the duration of the section.
 
 ## Chat Server
 
